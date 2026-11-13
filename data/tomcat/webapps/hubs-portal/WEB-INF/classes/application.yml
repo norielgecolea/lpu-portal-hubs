@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /hubs-portal
+
+spring:
+  application:
+    name: lpu-hubs-portal
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+app:
+  security:
+    secrets-dir: ${APP_SECRETS_DIR:data/secrets}
+  jwt:
+    # Leave blank to generate a private key under app.security.secrets-dir.
+    secret: ${APP_JWT_SECRET:}
+    secret-file: ${APP_JWT_SECRET_FILE:data/secrets/jwt-secret}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:28800000}
+    # ~10 years — "Keep me signed in" sessions last until explicit logout
+    remember-expiration-ms: ${APP_JWT_REMEMBER_EXPIRATION_MS:315360000000}
+
+logging:
+  config: classpath:log4j2.xml

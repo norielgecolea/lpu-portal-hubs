@@ -2,6 +2,7 @@ package org.nors.dev.codes.lpu.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.nors.dev.codes.lpu.dto.PortalResponse;
+import org.nors.dev.codes.lpu.dto.ServerTimeResponse;
 import org.nors.dev.codes.lpu.security.PortalHosts;
 import org.nors.dev.codes.lpu.service.PortalService;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,11 @@ public class PublicPortalController {
 
     public PublicPortalController(PortalService portalService) {
         this.portalService = portalService;
+    }
+
+    @GetMapping("/time")
+    public ServerTimeResponse time() {
+        return ServerTimeResponse.now();
     }
 
     @GetMapping("/portal")

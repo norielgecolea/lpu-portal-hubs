@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { fallbackPortal } from './fallback-portals';
 import { LinkIcon } from './link-icon';
 import { HubLink, PortalView, documentTitle, resolvePortalCode } from './portal';
 import { PortalService } from './portal.service';
+import { ServerClockService } from './server-clock.service';
 
 type LocalNetworkRequestInit = RequestInit & {
   targetAddressSpace?: 'local' | 'loopback' | 'private' | 'public';
@@ -11,24 +13,46 @@ type LocalNetworkRequestInit = RequestInit & {
 
 @Component({
   selector: 'app-hub-page',
-  imports: [LinkIcon],
+  imports: [LinkIcon, DatePipe],
   templateUrl: './hub-page.html',
   styleUrl: './hub-page.css',
 })
-export class HubPage implements OnInit {
+export class HubPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly portals = inject(PortalService);
   private readonly title = inject(Title);
+  protected readonly clock = inject(ServerClockService);
 
+  @ViewChild('mark') private mark?: ElementRef<HTMLImageElement>;
+  @ViewChild('slot') private slot?: ElementRef<HTMLElement>;
+
+  protected readonly reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  protected readonly opened = signal(this.reduceMotion);
+  protected readonly leaving = signal(this.reduceMotion);
   protected readonly portal = signal<PortalView>(fallbackPortal(resolvePortalCode()));
   /** null = still checking, true/false = result */
   protected readonly internetReachable = signal<boolean | null>(null);
 
   private probedUrl: string | null = null;
+  private introTimer = 0;
+  private settleTimer = 0;
+
+  ngAfterViewInit(): void {
+    if (this.reduceMotion || !this.mark || !this.slot) {
+      return;
+    }
+    this.introTimer = window.setTimeout(() => this.parkLogo(), 780);
+  }
+
+  ngOnDestroy(): void {
+    window.clearTimeout(this.introTimer);
+    window.clearTimeout(this.settleTimer);
+  }
 
   ngOnInit(): void {
     const code = resolvePortalCode();
     this.portal.set(fallbackPortal(code));
     this.title.setTitle(documentTitle(this.portal().title));
+    this.clock.start();
     this.probeInternet();
     this.portals.load(code).subscribe({
       next: (portal) => {
@@ -40,6 +64,60 @@ export class HubPage implements OnInit {
         // The seeded catalog stays on screen when the API is down.
       },
     });
+  }
+
+  protected note(link: HubLink): string {
+    if (link.networkOnly) {
+      return this.internetReachable() === null ? 'Checking the campus network…' : 'Campus network only';
+    }
+    if (link.icon === 'LIT') {
+      return 'Android app';
+    }
+    return link.description;
+  }
+
+  private parkLogo(): void {
+    const mark = this.mark?.nativeElement;
+    const slot = this.slot?.nativeElement;
+    if (!mark || !slot) {
+      this.opened.set(true);
+      return;
+    }
+    const from = mark.getBoundingClientRect();
+    const to = slot.getBoundingClientRect();
+    if (from.height < 8 || to.height < 8) {
+      this.opened.set(true);
+      return;
+    }
+
+    mark.style.animation = 'none';
+    mark.style.position = 'fixed';
+    mark.style.margin = '0';
+    mark.style.left = `${from.left}px`;
+    mark.style.top = `${from.top}px`;
+    mark.style.width = `${from.width}px`;
+    mark.style.height = `${from.height}px`;
+    mark.style.maxHeight = 'none';
+    mark.style.transform = 'none';
+
+    this.leaving.set(true);
+    requestAnimationFrame(() => {
+      mark.style.transition = 'left 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), top 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), width 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.72s cubic-bezier(0.2, 0.7, 0.2, 1)';
+      mark.style.left = `${to.left}px`;
+      mark.style.top = `${to.top}px`;
+      mark.style.width = `${to.width}px`;
+      mark.style.height = `${to.height}px`;
+    });
+
+    const finish = (event?: Event) => {
+      if (event instanceof TransitionEvent && event.propertyName !== 'left') {
+        return;
+      }
+      mark.removeEventListener('transitionend', finish);
+      this.opened.set(true);
+    };
+    mark.addEventListener('transitionend', finish);
+    this.settleTimer = window.setTimeout(() => finish(), 900);
   }
 
   protected isDisabled(link: HubLink): boolean {
