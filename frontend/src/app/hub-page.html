@@ -1,0 +1,109 @@
+<div
+  [class]="portal().layout === 'learner'
+    ? 'relative flex min-h-dvh flex-col overflow-x-hidden bg-slate-100 text-black sm:h-dvh sm:max-h-dvh sm:overflow-hidden'
+    : 'relative flex min-h-dvh flex-col overflow-hidden bg-slate-100 text-black'"
+>
+  <img
+    src="assets/lpu-building.png"
+    alt="LPU building background"
+    class="absolute inset-0 h-full w-full object-cover opacity-20"
+  />
+
+  <div class="animated-halo absolute -top-1/4 left-1/2 h-[140%] w-[140%] rounded-full bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.12)_0%,_rgba(244,114,182,0.08)_35%,_rgba(251,191,36,0.08)_60%,_transparent_75%)] blur-3xl"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-white/45 via-white/35 to-white/50"></div>
+  <div class="absolute -left-24 top-10 h-64 w-64 rounded-full bg-amber-300/20 blur-3xl"></div>
+  <div class="absolute -right-20 bottom-8 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl"></div>
+
+  <main
+    class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-center px-4 py-4 sm:px-6 sm:py-5 xl:px-10 xl:py-6"
+    [class.min-h-0]="portal().layout === 'learner'"
+  >
+    <section class="flex w-full flex-col items-center space-y-4 sm:space-y-5 xl:space-y-6">
+      <header class="hero-header flex w-full flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-6 xl:gap-8">
+        <div class="hero-logo shrink-0">
+          <img
+            src="assets/lpu-logo.png"
+            alt="LPU Logo"
+            [class]="portal().layout === 'learner'
+              ? 'h-20 w-auto object-contain drop-shadow-md sm:h-32 lg:h-40 xl:h-44'
+              : 'h-24 w-auto object-contain drop-shadow-md sm:h-32 lg:h-40 xl:h-44'"
+          />
+        </div>
+
+        <div class="hero-copy min-w-0 space-y-1.5 text-center sm:space-y-2.5">
+          <p
+            [class]="portal().layout === 'learner'
+              ? 'font-university text-xs font-semibold uppercase tracking-[0.28em] text-red-700/80 sm:text-sm sm:tracking-[0.35em] md:text-base'
+              : 'font-university text-xs font-semibold uppercase tracking-[0.28em] text-red-700/80 sm:text-sm md:text-base'"
+          >
+            {{ portal().welcomeLabel }}
+          </p>
+          <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl md:text-5xl xl:text-6xl">
+            {{ portal().title }}
+          </h1>
+          <div
+            [class]="portal().layout === 'learner' ? 'mx-auto h-1 w-14 rounded-full bg-gradient-to-r from-red-700 via-amber-500 to-red-700 sm:w-16' : 'mx-auto h-1 w-16 rounded-full bg-gradient-to-r from-red-700 via-amber-500 to-red-700'"
+          ></div>
+          <p
+            [class]="portal().layout === 'learner'
+              ? 'mx-auto max-w-xs text-xs leading-relaxed text-slate-700 sm:max-w-lg sm:text-sm md:text-base'
+              : 'mx-auto max-w-lg text-xs leading-relaxed text-slate-700 sm:text-sm md:text-base'"
+          >
+            {{ portal().subtitle }}
+          </p>
+        </div>
+      </header>
+
+      <aside
+        [class]="portal().layout === 'learner'
+          ? 'mx-auto w-full rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-xl sm:w-auto sm:max-w-6xl sm:p-4 xl:max-w-7xl xl:p-6'
+          : 'mx-auto w-full max-w-5xl rounded-3xl border border-slate-200 bg-white/80 p-3 shadow-xl sm:p-4 xl:p-6'"
+      >
+        <div
+          [class]="portal().layout === 'learner'
+            ? 'mx-auto grid w-full grid-cols-2 gap-2.5 sm:flex sm:w-[calc(5*10rem+4*0.75rem)] sm:flex-wrap sm:justify-center sm:gap-3 lg:w-[calc(5*11rem+4*0.75rem)] xl:gap-4 xl:w-[calc(5*12rem+4*1rem)]'
+            : 'flex flex-wrap justify-center gap-3 xl:gap-4'"
+        >
+          @for (link of portal().links; track link.name) {
+            <a
+              [attr.href]="isDisabled(link) ? null : link.url"
+              [attr.download]="link.downloadName"
+              [attr.target]="link.downloadName ? null : '_blank'"
+              [attr.rel]="link.downloadName ? null : 'noopener noreferrer'"
+              [attr.aria-disabled]="isDisabled(link) ? true : null"
+              [title]="link.networkOnly && internetReachable() === false ? 'Only available on the LPU network' : link.description"
+              (click)="onLinkClick($event, link)"
+              [class]="(portal().layout === 'learner'
+                ? 'group flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white p-2.5 text-center transition duration-200 hover:-translate-y-1 hover:border-red-500 hover:bg-red-50 hover:shadow-lg hover:shadow-red-400/60 sm:w-40 sm:gap-2 sm:p-3 lg:w-44 xl:w-48 xl:gap-3 xl:p-4'
+                : 'group flex min-h-24 w-[calc((100%-0.75rem)/2)] flex-col items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white p-2.5 text-center transition duration-200 hover:-translate-y-1 hover:border-red-500 hover:bg-red-50 hover:shadow-lg hover:shadow-red-400/60 sm:min-h-28 sm:gap-2 sm:p-3 md:min-h-32 md:w-[calc((100%-3rem)/5)] xl:min-h-36 xl:w-[calc((100%-4rem)/5)] xl:gap-3 xl:p-4')
+                + (isDisabled(link) ? ' pointer-events-none cursor-not-allowed opacity-40 grayscale' : '')"
+            >
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-black/5 transition group-hover:scale-105 sm:h-12 sm:w-12 xl:h-14 xl:w-14">
+                <app-link-icon [icon]="link.icon" [layout]="portal().layout" />
+              </div>
+
+              <div [class]="portal().layout === 'learner' ? 'space-y-0.5 px-0.5' : 'space-y-0.5'">
+                <p class="text-[11px] font-semibold leading-tight text-black sm:text-sm md:text-base">{{ link.name }}</p>
+                @if (link.icon === 'Outlook') {
+                  <p [class]="portal().layout === 'learner' ? 'text-[9px] font-medium text-slate-500 sm:text-[10px]' : 'text-[10px] font-medium text-slate-500'">Institutional Email</p>
+                }
+                @if (link.icon === 'LIT') {
+                  <p class="text-[9px] font-medium text-slate-500 sm:text-[10px]">Download APK</p>
+                }
+                @if (link.networkOnly) {
+                  <p [class]="portal().layout === 'learner' ? 'text-[9px] font-medium text-slate-500 sm:text-[10px]' : 'text-[10px] font-medium text-slate-500'">
+                    {{ internetReachable() === null ? 'Checking…' : 'LPU network only' }}
+                  </p>
+                }
+              </div>
+            </a>
+          }
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <p class="relative z-10 shrink-0 px-4 pb-3 pt-1 text-center text-xs text-black sm:text-sm">
+    © 2026 LPU - Laguna. Developed by MIS Department. All Rights Reserved.
+  </p>
+</div>

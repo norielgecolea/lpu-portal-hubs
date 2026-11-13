@@ -1,0 +1,112 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: hubs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      # Other campus systems can connect to this host on the LAN.
+      # Set POSTGRES_BIND=127.0.0.1 to accept connections from this machine only.
+      - "${POSTGRES_BIND:-0.0.0.0}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+      - ./data/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tomcat:
+    build:
+      context: ./docker/tomcat
+    image: lpu-hubs-tomcat:11-jdk21
+    container_name: hubs-tomcat
+    restart: unless-stopped
+    ports:
+      - "${TOMCAT_PORT:-8080}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-}
+      APP_JWT_SECRET_FILE: /usr/local/tomcat/secrets/jwt-secret
+      APP_SECRETS_DIR: /usr/local/tomcat/secrets
+      TZ: Asia/Manila
+      JAVA_OPTS: "-Xms256m -Xmx768m -Dlpu.log.dir=/usr/local/tomcat/logs"
+    mem_limit: 1280m
+    volumes:
+      # Deploy: mvn -f lpu-hubs-portal clean package && cp lpu-hubs-portal/target/hubs-portal.war data/tomcat/webapps/
+      - ./data/tomcat/webapps:/usr/local/tomcat/webapps
+      - ./data/tomcat/logs:/usr/local/tomcat/logs
+      - ./data/secrets:/usr/local/tomcat/secrets
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  angular:
+    image: node:24-alpine
+    container_name: hubs-angular
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - hubs_angular_node_modules:/app/node_modules
+    ports:
+      - "${ANGULAR_PORT:-4200}:4200"
+    environment:
+      BACKEND_URL: http://tomcat:8080
+      BACKEND_CONTEXT_PATH: /hubs-portal
+      # production = static build served on :4200 (nginx on :80 proxies /hubs-portal to Tomcat).
+      # development = ng serve with proxy.conf.js so localhost:4200 can call the API.
+      FRONTEND_MODE: ${FRONTEND_MODE:-production}
+      PORT: "4200"
+      HOST: "0.0.0.0"
+    command: >
+      sh -c "test -f package.json || { echo 'Missing package.json — mount ./frontend to /app'; exit 1; };
+      if [ \"$${FRONTEND_MODE:-production}\" = development ]; then
+        test -x node_modules/.bin/ng || npm install;
+        npx ng serve --host 0.0.0.0 --port 4200 --proxy-config proxy.conf.js --allowed-hosts;
+      else
+        test -f dist/lpu-hubs-portal/browser/index.html || { npm install && npx ng build; };
+        PORT=4200 HOST=0.0.0.0 node server.mjs;
+      fi"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - tomcat
+
+  web:
+    image: nginx:latest
+    container_name: hubs-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    volumes:
+      - ./data/web/templates:/etc/nginx/templates
+    environment:
+      NGINX_PORT: 80
+      SERVER_NAME: ${SERVER_NAME:-learnershub.lpulaguna.com adminportal.lpulaguna.com localhost}
+      UPSTREAM_HOST: angular
+      UPSTREAM_PORT: 4200
+      TOMCAT_HOST: tomcat
+      TOMCAT_PORT: 8080
+    depends_on:
+      - angular
+      - tomcat
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: hubs-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - ./data/cloudflared:/etc/cloudflared
+    depends_on:
+      - web
+
+volumes:
+  hubs_angular_node_modules:

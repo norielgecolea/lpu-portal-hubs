@@ -1,0 +1,190 @@
+<div class="relative min-h-dvh bg-slate-100 text-slate-900">
+  <img src="assets/lpu-building.png" alt="" class="absolute inset-0 h-full w-full object-cover opacity-20" />
+  <div class="absolute inset-0 bg-gradient-to-b from-white/70 via-white/55 to-white/70"></div>
+
+  <div class="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-6 sm:px-6">
+    <header class="mb-6 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="assets/lpu-logo.png" alt="LPU Logo" class="h-14 w-auto object-contain" />
+        <div>
+          <p class="font-university text-xs font-semibold uppercase tracking-[0.28em] text-red-700/80">MIS Department</p>
+          <h1 class="text-2xl font-bold text-slate-900">Portal links</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <a routerLink="/" class="font-semibold text-red-700 hover:underline">View hub</a>
+        @if (session()) {
+          <button type="button" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 font-semibold" (click)="signOut()">Sign out</button>
+        }
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ error() }}</p>
+    }
+    @if (notice()) {
+      <p class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ notice() }}</p>
+    }
+
+    @if (!session()) {
+      <form class="mx-auto mt-8 w-full max-w-md space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl" (ngSubmit)="signIn()">
+        <h2 class="text-xl font-bold">Sign in</h2>
+        <p class="text-sm text-slate-600">The first password is written to <span class="font-semibold">data/secrets/initial-admin-password</span> on the server and must be changed after sign-in.</p>
+        <label class="block text-sm font-semibold">
+          Username
+          <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" name="username" [(ngModel)]="username" autocomplete="username" required />
+        </label>
+        <label class="block text-sm font-semibold">
+          Password
+          <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required />
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="remember" [(ngModel)]="rememberMe" />
+          Keep me signed in
+        </label>
+        <button type="submit" class="w-full rounded-xl bg-red-700 px-4 py-2.5 font-semibold text-white disabled:opacity-60" [disabled]="loading()">
+          {{ loading() ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+    } @else if (session()?.passwordChangeRequired) {
+      <form class="mx-auto mt-8 w-full max-w-md space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl" (ngSubmit)="changePassword()">
+        <h2 class="text-xl font-bold">Choose a new password</h2>
+        <p class="text-sm text-slate-600">Signed in as {{ session()?.username }}. Replace the one-time password before editing links.</p>
+        <label class="block text-sm font-semibold">
+          Current password
+          <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" type="password" name="current" [(ngModel)]="currentPassword" autocomplete="current-password" required />
+        </label>
+        <label class="block text-sm font-semibold">
+          New password
+          <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" type="password" name="next" [(ngModel)]="newPassword" autocomplete="new-password" minlength="8" required />
+        </label>
+        <button type="submit" class="w-full rounded-xl bg-red-700 px-4 py-2.5 font-semibold text-white disabled:opacity-60" [disabled]="loading()">
+          {{ loading() ? 'Saving…' : 'Update password' }}
+        </button>
+      </form>
+    } @else {
+      <div class="space-y-8 pb-10">
+        @for (portal of portalsDraft(); track portal.code) {
+          <section class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-xl sm:p-6">
+            <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-red-700">{{ portal.code === 'ADMIN' ? 'adminportal.lpulaguna.com' : 'learnershub.lpulaguna.com' }}</p>
+                <h2 class="text-xl font-bold">{{ portal.code === 'ADMIN' ? 'Admin Portal' : "Learner's Hub" }}</h2>
+              </div>
+            </div>
+
+            <div class="mb-6 grid gap-3 sm:grid-cols-3">
+              <label class="text-sm font-semibold">
+                Welcome
+                <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" [(ngModel)]="portal.welcomeLabel" [name]="'welcome-' + portal.code" />
+              </label>
+              <label class="text-sm font-semibold">
+                Title
+                <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" [(ngModel)]="portal.title" [name]="'title-' + portal.code" />
+              </label>
+              <label class="text-sm font-semibold sm:col-span-3">
+                Subtitle
+                <input class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 font-normal" [(ngModel)]="portal.subtitle" [name]="'subtitle-' + portal.code" />
+              </label>
+              <button type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:col-span-3 sm:w-fit" [disabled]="portal.saving" (click)="saveHeading(portal)">
+                {{ portal.saving ? 'Saving…' : 'Save heading' }}
+              </button>
+            </div>
+
+            <div class="space-y-4">
+              @for (link of portal.links; track link.id) {
+                <form class="grid gap-3 rounded-2xl border border-slate-200 p-3 sm:grid-cols-6" (ngSubmit)="saveLink(portal, link)">
+                  <label class="text-xs font-semibold sm:col-span-2">
+                    Name
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="link.name" [name]="'name-' + link.id" required />
+                  </label>
+                  <label class="text-xs font-semibold sm:col-span-3">
+                    URL
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="link.url" [name]="'url-' + link.id" required />
+                  </label>
+                  <label class="text-xs font-semibold">
+                    Order
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" type="number" [(ngModel)]="link.sortOrder" [name]="'order-' + link.id" required />
+                  </label>
+                  <label class="text-xs font-semibold sm:col-span-3">
+                    Description
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="link.description" [name]="'desc-' + link.id" required />
+                  </label>
+                  <label class="text-xs font-semibold sm:col-span-2">
+                    Icon
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="link.icon" [name]="'icon-' + link.id" [attr.list]="'icons-' + portal.code" required />
+                  </label>
+                  <label class="text-xs font-semibold">
+                    Download name
+                    <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="link.downloadName" [name]="'file-' + link.id" />
+                  </label>
+                  <label class="flex items-center gap-2 text-xs font-semibold">
+                    <input type="checkbox" [(ngModel)]="link.networkOnly" [name]="'net-' + link.id" />
+                    LPU network only
+                  </label>
+                  <label class="flex items-center gap-2 text-xs font-semibold">
+                    <input type="checkbox" [(ngModel)]="link.enabled" [name]="'on-' + link.id" />
+                    Visible
+                  </label>
+                  <p class="self-center text-xs text-slate-500">{{ link.clickCount }} opens</p>
+                  <div class="flex gap-2 sm:col-span-6">
+                    <button type="submit" class="rounded-lg bg-red-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60" [disabled]="link.saving">
+                      {{ link.saving ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold" (click)="removeLink(portal, link)">Remove</button>
+                  </div>
+                </form>
+              }
+            </div>
+
+            <form class="mt-4 grid gap-3 rounded-2xl border border-dashed border-slate-300 p-3 sm:grid-cols-6" (ngSubmit)="saveLink(portal, portal.draft)">
+              <h3 class="text-sm font-bold sm:col-span-6">Add a link</h3>
+              <label class="text-xs font-semibold sm:col-span-2">
+                Name
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="portal.draft.name" [name]="'new-name-' + portal.code" required />
+              </label>
+              <label class="text-xs font-semibold sm:col-span-3">
+                URL
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="portal.draft.url" [name]="'new-url-' + portal.code" required />
+              </label>
+              <label class="text-xs font-semibold">
+                Order
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" type="number" [(ngModel)]="portal.draft.sortOrder" [name]="'new-order-' + portal.code" required />
+              </label>
+              <label class="text-xs font-semibold sm:col-span-3">
+                Description
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="portal.draft.description" [name]="'new-desc-' + portal.code" required />
+              </label>
+              <label class="text-xs font-semibold sm:col-span-2">
+                Icon
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="portal.draft.icon" [name]="'new-icon-' + portal.code" [attr.list]="'icons-' + portal.code" required />
+              </label>
+              <label class="text-xs font-semibold">
+                Download name
+                <input class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" [(ngModel)]="portal.draft.downloadName" [name]="'new-file-' + portal.code" />
+              </label>
+              <datalist [id]="'icons-' + portal.code">
+                @for (icon of icons; track icon) {
+                  <option [value]="icon"></option>
+                }
+              </datalist>
+              <label class="flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" [(ngModel)]="portal.draft.networkOnly" [name]="'new-net-' + portal.code" />
+                LPU network only
+              </label>
+              <label class="flex items-center gap-2 text-xs font-semibold">
+                <input type="checkbox" [(ngModel)]="portal.draft.enabled" [name]="'new-on-' + portal.code" />
+                Visible
+              </label>
+              <div class="sm:col-span-6">
+                <button type="submit" class="rounded-lg bg-red-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60" [disabled]="portal.draft.saving">
+                  {{ portal.draft.saving ? 'Adding…' : 'Add link' }}
+                </button>
+              </div>
+            </form>
+          </section>
+        }
+      </div>
+    }
+  </div>
+</div>
