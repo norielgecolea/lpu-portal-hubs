@@ -18,6 +18,9 @@ type LocalNetworkRequestInit = RequestInit & {
   styleUrl: './hub-page.css',
 })
 export class HubPage implements OnInit, AfterViewInit, OnDestroy {
+  private static readonly INTRO_FADE_MS = 700;
+  private static readonly INTRO_HOLD_MS = 1500;
+  private static readonly ASSET_WAIT_MS = 5000;
   private readonly portals = inject(PortalService);
   private readonly title = inject(Title);
   protected readonly clock = inject(ServerClockService);
@@ -35,15 +38,23 @@ export class HubPage implements OnInit, AfterViewInit, OnDestroy {
   private probedUrl: string | null = null;
   private introTimer = 0;
   private settleTimer = 0;
+  private destroyed = false;
 
   ngAfterViewInit(): void {
     if (this.reduceMotion || !this.mark || !this.slot) {
       return;
     }
-    this.introTimer = window.setTimeout(() => this.parkLogo(), 780);
+    const holdUntil = performance.now() + HubPage.INTRO_FADE_MS + HubPage.INTRO_HOLD_MS;
+    void this.preloadAssets().finally(() => {
+      if (this.destroyed) {
+        return;
+      }
+      this.introTimer = window.setTimeout(() => this.parkLogo(), Math.max(0, holdUntil - performance.now()));
+    });
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     window.clearTimeout(this.introTimer);
     window.clearTimeout(this.settleTimer);
   }
@@ -83,8 +94,9 @@ export class HubPage implements OnInit, AfterViewInit, OnDestroy {
       this.opened.set(true);
       return;
     }
-    const from = mark.getBoundingClientRect();
-    const to = slot.getBoundingClientRect();
+    const ratio = this.logoRatio(mark);
+    const from = this.fitBox(mark.getBoundingClientRect(), ratio);
+    const to = this.fitBox(slot.getBoundingClientRect(), ratio);
     if (from.height < 8 || to.height < 8) {
       this.opened.set(true);
       return;
@@ -93,6 +105,7 @@ export class HubPage implements OnInit, AfterViewInit, OnDestroy {
     mark.style.animation = 'none';
     mark.style.position = 'fixed';
     mark.style.margin = '0';
+    mark.style.objectFit = 'contain';
     mark.style.left = `${from.left}px`;
     mark.style.top = `${from.top}px`;
     mark.style.width = `${from.width}px`;
@@ -118,6 +131,52 @@ export class HubPage implements OnInit, AfterViewInit, OnDestroy {
     };
     mark.addEventListener('transitionend', finish);
     this.settleTimer = window.setTimeout(() => finish(), 900);
+  }
+
+  /** Crest artwork is 701×1000. The flight keeps that ratio so the shield does not stretch. */
+  private logoRatio(mark: HTMLImageElement): number {
+    if (mark.naturalWidth > 0 && mark.naturalHeight > 0) {
+      return mark.naturalWidth / mark.naturalHeight;
+    }
+    return 701 / 1000;
+  }
+
+  private fitBox(box: DOMRect, ratio: number): { left: number; top: number; width: number; height: number } {
+    if (box.width / box.height > ratio) {
+      const height = box.height;
+      const width = height * ratio;
+      return { left: box.left + (box.width - width) / 2, top: box.top, width, height };
+    }
+    const width = box.width;
+    const height = width / ratio;
+    return { left: box.left, top: box.top + (box.height - height) / 2, width, height };
+  }
+
+  private preloadAssets(): Promise<void> {
+    const sources = [
+      'assets/lpu-logo.png',
+      'assets/lpu-building.png',
+      'assets/teams-logo.png',
+      'assets/dorado.png',
+      'assets/lit_logo.png',
+    ];
+    const ready = Promise.all(sources.map((src) => this.decodeImage(src))).then(() => undefined);
+    const giveUp = new Promise<void>((resolve) => {
+      window.setTimeout(resolve, HubPage.ASSET_WAIT_MS);
+    });
+    return Promise.race([ready, giveUp]);
+  }
+
+  private decodeImage(src: string): Promise<void> {
+    return new Promise((resolve) => {
+      const image = new Image();
+      const finish = () => resolve();
+      image.onload = () => {
+        void (image.decode?.() ?? Promise.resolve()).then(finish, finish);
+      };
+      image.onerror = finish;
+      image.src = src;
+    });
   }
 
   protected isDisabled(link: HubLink): boolean {

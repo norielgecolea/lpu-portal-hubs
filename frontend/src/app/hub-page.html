@@ -8,6 +8,16 @@
     </div>
   }
 
+  <div class="topline">
+    <div class="topline-rule" aria-hidden="true"></div>
+    <p class="clock">
+      @if (clock.now(); as now) {
+        <span class="clock-time">{{ now | date: 'h:mm:ss a' : clock.datePipeTimezone() }}</span>
+        <span class="clock-date">{{ now | date: 'EEEE, MMMM d, y' : clock.datePipeTimezone() }}</span>
+      }
+    </p>
+  </div>
+
   <div class="sheet">
     <header class="mast">
       <div class="mast-slot" #slot>
@@ -17,21 +27,14 @@
         <p class="kicker">{{ portal().welcomeLabel }}</p>
         <h1>{{ portal().title }}</h1>
         <p class="lede">{{ portal().subtitle }}</p>
-        @if (clock.now(); as now) {
-          <p class="clock">
-            <span class="clock-time">{{ now | date: 'h:mm:ss a' : clock.datePipeTimezone() }}</span>
-            <span class="clock-date">{{ now | date: 'EEEE, MMMM d, y' : clock.datePipeTimezone() }}</span>
-          </p>
-        }
       </div>
     </header>
 
     <nav class="directory" [attr.aria-label]="portal().title">
-      @for (link of portal().links; track link.name; let i = $index) {
+      @for (link of portal().links; track link.name) {
         <a
           class="service"
           [class.is-off]="isDisabled(link)"
-          [style.animation-delay]="leaving() ? (0.16 + i * 0.04) + 's' : null"
           [attr.href]="isDisabled(link) ? null : link.url"
           [attr.download]="link.downloadName"
           [attr.target]="link.downloadName ? null : '_blank'"
