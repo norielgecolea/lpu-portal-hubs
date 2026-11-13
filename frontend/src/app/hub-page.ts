@@ -102,35 +102,50 @@ export class HubPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    const scale = to.width / from.width;
+    const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+    const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+
     mark.style.animation = 'none';
     mark.style.position = 'fixed';
     mark.style.margin = '0';
+    mark.style.right = 'auto';
+    mark.style.bottom = 'auto';
+    mark.style.aspectRatio = 'auto';
     mark.style.objectFit = 'contain';
+    mark.style.maxWidth = 'none';
+    mark.style.maxHeight = 'none';
     mark.style.left = `${from.left}px`;
     mark.style.top = `${from.top}px`;
     mark.style.width = `${from.width}px`;
     mark.style.height = `${from.height}px`;
-    mark.style.maxHeight = 'none';
-    mark.style.transform = 'none';
+    mark.style.transformOrigin = 'center center';
+    mark.style.transform = 'translate(0px, 0px) scale(1)';
 
     this.leaving.set(true);
+    // Chromium and Firefox drop the flight if the end state is set before the
+    // start box is painted. Width and height stay fixed so the artwork cannot stretch.
+    mark.getBoundingClientRect();
     requestAnimationFrame(() => {
-      mark.style.transition = 'left 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), top 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), width 0.72s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.72s cubic-bezier(0.2, 0.7, 0.2, 1)';
-      mark.style.left = `${to.left}px`;
-      mark.style.top = `${to.top}px`;
-      mark.style.width = `${to.width}px`;
-      mark.style.height = `${to.height}px`;
+      requestAnimationFrame(() => {
+        if (this.destroyed) {
+          return;
+        }
+        mark.style.transition = 'transform 0.72s cubic-bezier(0.2, 0.7, 0.2, 1)';
+        mark.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      });
     });
 
     const finish = (event?: Event) => {
-      if (event instanceof TransitionEvent && event.propertyName !== 'left') {
+      if (event instanceof TransitionEvent && event.propertyName !== 'transform') {
         return;
       }
       mark.removeEventListener('transitionend', finish);
+      window.clearTimeout(this.settleTimer);
       this.opened.set(true);
     };
     mark.addEventListener('transitionend', finish);
-    this.settleTimer = window.setTimeout(() => finish(), 900);
+    this.settleTimer = window.setTimeout(() => finish(), 1100);
   }
 
   /** Crest artwork is 701×1000. The flight keeps that ratio so the shield does not stretch. */
