@@ -31,7 +31,7 @@ yarn-error.log*
 # Runtime data (data/web/templates and data/tomcat/webapps stay tracked)
 data/postgres-data/
 data/tomcat/logs/
-data/tomcat/webapps/*.war
+
 data/cloudflared/
 
 # Logs
